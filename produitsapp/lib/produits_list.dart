@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'produit_box.dart';
-import 'add_produit.dart';
+import 'add_produit_form.dart';
+import 'produit_details.dart';
+import 'model/produit.dart';
 
 class ProduitsList extends StatefulWidget {
   const ProduitsList({super.key});
@@ -10,15 +12,8 @@ class ProduitsList extends StatefulWidget {
 }
 
 class _ProduitsListState extends State<ProduitsList> {
-  List<String> produits = [
-    'Ordinateur',
-    'Téléphone',
-    'Tablette',
-    'Clavier',
-    'Souris',
-  ];
-
-  List<bool> selections = [false, false, false, false, false];
+  List<Produit> produits = [];
+  List<bool> selections = [];
 
   void _toggleSelection(int index, bool? value) {
     setState(() {
@@ -26,18 +21,22 @@ class _ProduitsListState extends State<ProduitsList> {
     });
   }
 
-  void _addProduit() async {
-    final result = await showDialog<String>(
-      context: context,
-      builder: (context) => const AddProduit(),
+  void _addProduit() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddProduitForm(
+          onSubmit: _saveProduit,
+        ),
+      ),
     );
+  }
 
-    if (result != null && result.isNotEmpty) {
-      setState(() {
-        produits.add(result);
-        selections.add(false);
-      });
-    }
+  void _saveProduit(Produit produit) {
+    setState(() {
+      produits.add(produit);
+      selections.add(false);
+    });
   }
 
   void _delProduit(int index) {
@@ -57,6 +56,15 @@ class _ProduitsListState extends State<ProduitsList> {
         }
       }
     });
+  }
+
+  void _viewProduitDetails(Produit produit) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ProduitDetails(produit: produit),
+      ),
+    );
   }
 
   bool get hasSelectedProducts => selections.any((selected) => selected);
@@ -101,17 +109,47 @@ class _ProduitsListState extends State<ProduitsList> {
             ),
         ],
       ),
-      body: ListView.builder(
-        itemCount: produits.length,
-        itemBuilder: (context, index) {
-          return ProduitBox(
-            nomProduit: produits[index],
-            selProduit: selections[index],
-            onChanged: (value) => _toggleSelection(index, value),
-            delProduit: () => _delProduit(index),
-          );
-        },
-      ),
+      body: produits.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.shopping_bag_outlined,
+                    size: 100,
+                    color: Colors.grey[300],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Aucun produit',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Appuyez sur + pour ajouter un produit',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : ListView.builder(
+              itemCount: produits.length,
+              itemBuilder: (context, index) {
+                return ProduitBox(
+                  produit: produits[index],
+                  selProduit: selections[index],
+                  onChanged: (value) => _toggleSelection(index, value),
+                  delProduit: () => _delProduit(index),
+                  onTap: () => _viewProduitDetails(produits[index]),
+                );
+              },
+            ),
       floatingActionButton: FloatingActionButton(
         onPressed: _addProduit,
         tooltip: 'Ajouter un produit',
