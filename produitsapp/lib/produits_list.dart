@@ -2,63 +2,57 @@ import 'package:flutter/material.dart';
 import 'produit_box.dart';
 import 'add_produit_form.dart';
 import 'produit_details.dart';
-import 'model/produit.dart';
+import 'dao/produit_dao.dart';
+import 'data/base.dart';
 
-class ProduitsList extends StatefulWidget {
-  const ProduitsList({super.key});
+class ProduitsList extends StatelessWidget {
+  final ProduitDAO produitDAO;
 
-  @override
-  State<ProduitsList> createState() => _ProduitsListState();
-}
+  const ProduitsList({super.key, required this.produitDAO});
 
-class _ProduitsListState extends State<ProduitsList> {
-  List<Produit> produits = [];
-  List<bool> selections = [];
-
-  void _toggleSelection(int index, bool? value) {
-    setState(() {
-      selections[index] = value ?? false;
-    });
-  }
-
-  void _addProduit() {
+  void _addProduit(BuildContext context) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => AddProduitForm(
-          onSubmit: _saveProduit,
-        ),
+        builder: (context) => AddProduitForm(produitDAO: produitDAO),
       ),
     );
   }
 
-  void _saveProduit(Produit produit) {
-    setState(() {
-      produits.add(produit);
-      selections.add(false);
-    });
+  void _delProduit(int id) {
+    produitDAO.deleteProduit(id);
   }
 
-  void _delProduit(int index) {
-    setState(() {
-      produits.removeAt(index);
-      selections.removeAt(index);
-    });
+  void _deleteSelected(BuildContext context, List<int> selectedIds) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmation'),
+        content: const Text('Voulez-vous supprimer les produits sélectionnés ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              for (var id in selectedIds) {
+                produitDAO.deleteProduit(id);
+              }
+              Navigator.of(context).pop();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
   }
 
-  void _deleteSelected() {
-    setState(() {
-      // Remove products in reverse order to maintain correct indices
-      for (int i = produits.length - 1; i >= 0; i--) {
-        if (selections[i]) {
-          produits.removeAt(i);
-          selections.removeAt(i);
-        }
-      }
-    });
-  }
-
-  void _viewProduitDetails(Produit produit) {
+  void _viewProduitDetails(BuildContext context, ProduitsTableData produit) {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -67,7 +61,88 @@ class _ProduitsListState extends State<ProduitsList> {
     );
   }
 
-  bool get hasSelectedProducts => selections.any((selected) => selected);
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<ProduitsTableData>>(
+      stream: produitDAO.getAllProduits(),
+      builder: (context, snapshot) {
+        // Handle loading state
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Liste des Produits')),
+            body: const Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        // Handle error state
+        if (snapshot.hasError) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Liste des Produits')),
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 60, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text('Erreur: ${snapshot.error}'),
+                ],
+              ),
+            ),
+          );
+        }
+
+        // Get products from snapshot
+        final produits = snapshot.data ?? [];
+
+        return _ProduitsListContent(
+          produits: produits,
+          produitDAO: produitDAO,
+          onAddProduit: () => _addProduit(context),
+          onDeleteProduit: _delProduit,
+          onDeleteSelected: (selectedIds) =>
+              _deleteSelected(context, selectedIds),
+          onViewDetails: (produit) => _viewProduitDetails(context, produit),
+        );
+      },
+    );
+  }
+}
+
+class _ProduitsListContent extends StatefulWidget {
+  final List<ProduitsTableData> produits;
+  final ProduitDAO produitDAO;
+  final VoidCallback onAddProduit;
+  final Function(int) onDeleteProduit;
+  final Function(List<int>) onDeleteSelected;
+  final Function(ProduitsTableData) onViewDetails;
+
+  const _ProduitsListContent({
+    required this.produits,
+    required this.produitDAO,
+    required this.onAddProduit,
+    required this.onDeleteProduit,
+    required this.onDeleteSelected,
+    required this.onViewDetails,
+  });
+
+  @override
+  State<_ProduitsListContent> createState() => _ProduitsListContentState();
+}
+
+class _ProduitsListContentState extends State<_ProduitsListContent> {
+  final Set<int> _selectedIds = {};
+
+  void _toggleSelection(int id) {
+    setState(() {
+      if (_selectedIds.contains(id)) {
+        _selectedIds.remove(id);
+      } else {
+        _selectedIds.add(id);
+      }
+    });
+  }
+
+  bool get hasSelectedProducts => _selectedIds.isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -80,36 +155,13 @@ class _ProduitsListState extends State<ProduitsList> {
               icon: const Icon(Icons.delete_sweep),
               tooltip: 'Supprimer la sélection',
               onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Confirmation'),
-                    content: const Text(
-                        'Voulez-vous supprimer les produits sélectionnés ?'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Annuler'),
-                      ),
-                      ElevatedButton(
-                        onPressed: () {
-                          _deleteSelected();
-                          Navigator.of(context).pop();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
-                        ),
-                        child: const Text('Supprimer'),
-                      ),
-                    ],
-                  ),
-                );
+                widget.onDeleteSelected(_selectedIds.toList());
+                setState(() => _selectedIds.clear());
               },
             ),
         ],
       ),
-      body: produits.isEmpty
+      body: widget.produits.isEmpty
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -139,19 +191,20 @@ class _ProduitsListState extends State<ProduitsList> {
               ),
             )
           : ListView.builder(
-              itemCount: produits.length,
+              itemCount: widget.produits.length,
               itemBuilder: (context, index) {
+                final produit = widget.produits[index];
                 return ProduitBox(
-                  produit: produits[index],
-                  selProduit: selections[index],
-                  onChanged: (value) => _toggleSelection(index, value),
-                  delProduit: () => _delProduit(index),
-                  onTap: () => _viewProduitDetails(produits[index]),
+                  produit: produit,
+                  selProduit: _selectedIds.contains(produit.id),
+                  onChanged: (value) => _toggleSelection(produit.id),
+                  delProduit: () => widget.onDeleteProduit(produit.id),
+                  onTap: () => widget.onViewDetails(produit),
                 );
               },
             ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _addProduit,
+        onPressed: widget.onAddProduit,
         tooltip: 'Ajouter un produit',
         child: const Icon(Icons.add),
       ),

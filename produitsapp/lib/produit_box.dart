@@ -1,10 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
-import 'model/produit.dart';
+import 'data/base.dart';
 
 class ProduitBox extends StatelessWidget {
-  final Produit produit;
+  final ProduitsTableData produit;
   final bool selProduit;
   final Function(bool?) onChanged;
   final Function() delProduit;
@@ -91,14 +91,14 @@ class ProduitBox extends StatelessWidget {
                             ),
                     ),
                   ),
-                  // Product Name
+                  // Product Name and Price
                   Expanded(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          produit.libelle ?? 'Sans nom',
+                          produit.libelle,
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -108,7 +108,7 @@ class ProduitBox extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${produit.prix?.toStringAsFixed(2) ?? '0.00'} €',
+                          '${produit.prix.toStringAsFixed(2)} €',
                           style: TextStyle(
                             fontSize: 14,
                             color: Theme.of(context).primaryColor,

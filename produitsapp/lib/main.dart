@@ -1,12 +1,22 @@
 import 'package:flutter/material.dart';
 import 'produits_list.dart';
+import 'data/base.dart';
+import 'dao/produit_dao.dart';
 
-void main() {
-  runApp(const MainApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize database
+  final database = ProduitsDatabase();
+  final produitDAO = ProduitDAO(database);
+
+  runApp(MainApp(produitDAO: produitDAO));
 }
 
 class MainApp extends StatelessWidget {
-  const MainApp({super.key});
+  final ProduitDAO produitDAO;
+
+  const MainApp({super.key, required this.produitDAO});
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +34,7 @@ class MainApp extends StatelessWidget {
           elevation: 2,
         ),
       ),
-      home: const ProduitsList(),
+      home: ProduitsList(produitDAO: produitDAO),
     );
   }
 }

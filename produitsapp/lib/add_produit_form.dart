@@ -1,12 +1,14 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'model/produit.dart';
+import 'package:drift/drift.dart' as drift;
+import 'dao/produit_dao.dart';
+import 'data/base.dart';
 
 class AddProduitForm extends StatefulWidget {
-  final Function(Produit) onSubmit;
+  final ProduitDAO produitDAO;
 
-  const AddProduitForm({super.key, required this.onSubmit});
+  const AddProduitForm({super.key, required this.produitDAO});
 
   @override
   State<AddProduitForm> createState() => _AddProduitFormState();
@@ -14,7 +16,9 @@ class AddProduitForm extends StatefulWidget {
 
 class _AddProduitFormState extends State<AddProduitForm> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final Produit _produit = Produit();
+  String? _libelle;
+  String? _description;
+  double? _prix;
   String? _pickedImagePath;
   final ImagePicker _picker = ImagePicker();
 
@@ -41,13 +45,30 @@ class _AddProduitFormState extends State<AddProduitForm> {
     }
   }
 
-  void _saveProduit() {
+  Future<void> _saveProduit() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
-      _produit.photo = _pickedImagePath;
-      _produit.id = DateTime.now().millisecondsSinceEpoch.toString();
-      widget.onSubmit(_produit);
-      Navigator.pop(context);
+
+      // Create companion object for database insertion
+      final companion = ProduitsTableCompanion.insert(
+        libelle: _libelle!,
+        description: _description!,
+        prix: _prix!,
+        photo: drift.Value(_pickedImagePath),
+      );
+
+      try {
+        await widget.produitDAO.insertProduit(companion);
+        if (mounted) {
+          Navigator.pop(context);
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Erreur lors de l\'ajout: $e')),
+          );
+        }
+      }
     }
   }
 
@@ -113,7 +134,7 @@ class _AddProduitFormState extends State<AddProduitForm> {
                     }
                     return null;
                   },
-                  onSaved: (value) => _produit.libelle = value,
+                  onSaved: (value) => _libelle = value,
                 ),
                 const SizedBox(height: 16),
                 // Description Field
@@ -129,7 +150,7 @@ class _AddProduitFormState extends State<AddProduitForm> {
                     }
                     return null;
                   },
-                  onSaved: (value) => _produit.description = value,
+                  onSaved: (value) => _description = value,
                 ),
                 const SizedBox(height: 16),
                 // Prix Field
@@ -149,7 +170,7 @@ class _AddProduitFormState extends State<AddProduitForm> {
                     }
                     return null;
                   },
-                  onSaved: (value) => _produit.prix = double.parse(value!),
+                  onSaved: (value) => _prix = double.parse(value!),
                 ),
                 const SizedBox(height: 24),
                 // Action Buttons

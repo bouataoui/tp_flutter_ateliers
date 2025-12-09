@@ -1,9 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'model/produit.dart';
+import 'data/base.dart';
 
 class ProduitDetails extends StatelessWidget {
-  final Produit produit;
+  final ProduitsTableData produit;
 
   const ProduitDetails({super.key, required this.produit});
 
@@ -11,7 +11,7 @@ class ProduitDetails extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(produit.libelle ?? 'Détails du produit'),
+        title: Text(produit.libelle),
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -61,7 +61,7 @@ class ProduitDetails extends StatelessWidget {
                 children: [
                   // Product Name
                   Text(
-                    produit.libelle ?? 'Sans nom',
+                    produit.libelle,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -79,7 +79,7 @@ class ProduitDetails extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      '${produit.prix?.toStringAsFixed(2) ?? '0.00'} €',
+                      '${produit.prix.toStringAsFixed(2)} €',
                       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                             color: Theme.of(context).primaryColor,
                             fontWeight: FontWeight.bold,
@@ -99,7 +99,7 @@ class ProduitDetails extends StatelessWidget {
                   
                   // Description Content
                   Text(
-                    produit.description ?? 'Aucune description disponible',
+                    produit.description,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: Colors.grey[700],
                           height: 1.5,
@@ -119,7 +119,7 @@ class ProduitDetails extends StatelessWidget {
                         Icon(Icons.qr_code, color: Colors.grey[600]),
                         const SizedBox(width: 8),
                         Text(
-                          'ID: ${produit.id ?? 'N/A'}',
+                          'ID: ${produit.id}',
                           style: TextStyle(
                             color: Colors.grey[600],
                             fontSize: 12,
